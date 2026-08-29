@@ -15,6 +15,9 @@ venv/
 data/chroma/
 data/eval/results_*.json
 
+# 简历文档（内部用，不公开）
+docs/RESUME.md
+
 # IDE / 系统
 .vscode/
 .idea/

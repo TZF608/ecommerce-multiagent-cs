@@ -127,7 +127,7 @@ python -m pytest tests/ -q
 python scripts/ablation.py
 ```
 
-- 单元测试 27 个用例：意图路由、jieba 中文 BM25 检索、订单/物流/退款工具、投诉人工接管（interrupt/resume）、跨轮会话记忆、评测集 schema
+- 单元测试 37 个用例：意图路由、jieba 中文 BM25 检索、订单/物流/退款工具、投诉人工接管（interrupt/resume）、跨轮会话记忆、多轮 query 改写、评测集 schema
 - 消融实验（100 条评测集、TOP_K=4）：纯向量 96.0% / 纯 BM25 93.0% / **混合检索 98.0%**，混合路零回退（无纯向量命中而混合漏掉的条目）
 
 ## 进阶优化方向（写进简历的加分项）
