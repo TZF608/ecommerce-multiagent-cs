@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>星火数码智能客服</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f5f6fa; height: 100vh; display: flex; justify-content: center; }
+  .chat { width: 100%; max-width: 560px; height: 100%; display: flex; flex-direction: column; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.06); }
+  header { background: #4f46e5; color: #fff; padding: 14px 20px; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header p { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .msgs { flex: 1; overflow-y: auto; padding: 16px; }
+  .msg { margin-bottom: 14px; display: flex; }
+  .msg .bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { justify-content: flex-end; }
+  .msg.user .bubble { background: #4f46e5; color: #fff; border-bottom-right-radius: 2px; }
+  .msg.agent .bubble { background: #f0f1f5; border-bottom-left-radius: 2px; }
+  .meta { font-size: 11px; color: #999; margin-top: 6px; }
+  .handoff { background: #fff7e6; border: 1px solid #ffd591; border-radius: 12px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; color: #873800; }
+  .handoff textarea { width: 100%; min-height: 60px; margin-top: 8px; padding: 8px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 13px; resize: vertical; }
+  .handoff button { margin-top: 8px; background: #fa8c16; color: #fff; border: 0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #eee; background: #fafafa; }
+  .input input { flex: 1; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 20px; font-size: 14px; outline: none; }
+  .input input:focus { border-color: #4f46e5; }
+  .input button { background: #4f46e5; color: #fff; border: 0; border-radius: 20px; padding: 0 22px; font-size: 14px; cursor: pointer; }
+  .typing { color: #999; font-size: 13px; padding: 4px 2px; }
+</style>
+</head>
+<body>
+<div class="chat">
+  <header>
+    <h1>星火数码 · 智能客服</h1>
+    <p>多智能体 · Agentic RAG · 人工接管</p>
+  </header>
+  <div class="msgs" id="msgs">
+    <div class="msg agent"><div class="bubble">您好，我是星火数码智能客服，可以帮您解答商品咨询、订单物流、退换货退款等问题 😊</div></div>
+  </div>
+  <div class="input" id="inputbar">
+    <input id="q" placeholder="输入你的问题，回车发送" autocomplete="off" />
+    <button id="send">发送</button>
+  </div>
+</div>
+
+<script>
+const msgs = document.getElementById('msgs');
+const input = document.getElementById('q');
+const inputbar = document.getElementById('inputbar');
+let sessionId = null;
+let waiting = false;
+
+function addMsg(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.textContent = text;
+  div.appendChild(b);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return b;
+}
+
+function addMeta(text) {
+  const m = document.createElement('div');
+  m.className = 'meta';
+  m.textContent = text;
+  msgs.appendChild(m);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function send(message) {
+  if (waiting) return;
+  waiting = true;
+  addMsg('user', message);
+  const typing = document.createElement('div');
+  typing.className = 'typing';
+  typing.textContent = '客服正在输入…';
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, session_id: sessionId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      typing.remove();
+      addMsg('agent', '出错了：' + (err.detail || res.statusText));
+      waiting = false;
+      return;
+    }
+    const data = await res.json();
+    sessionId = data.session_id;
+    typing.remove();
+    addMsg('agent', data.reply);
+    if (data.handoff_pending) {
+      showHandoff(data);
+    } else if (data.intent || data.sources?.length) {
+      addMeta(
+        '意图: ' + (data.intent || '-') +
+        (data.sources?.length ? ' | 知识来源: ' + data.sources.join('、') : '') +
+        ' | 成本 $' + data.cost_usd.toFixed(5) + ' | 耗时 ' + data.latency_ms + 'ms'
+      );
+    }
+  } catch (e) {
+    typing.remove();
+    addMsg('agent', '网络错误：' + e.message);
+  }
+  waiting = false;
+}
+
+function showHandoff(data) {
+  const box = document.createElement('div');
+  box.className = 'handoff';
+  box.innerHTML =
+    '<div><b>已转接人工客服</b>（演示模式）：请输入人工客服的处理结果，或点“忽略”结束。</div>' +
+    '<textarea id="humanReply" placeholder="人工客服的处理结果…"></textarea>' +
+    '<button id="sendHuman">发送给用户</button> <button id="skipHuman">忽略</button>';
+  msgs.appendChild(box);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  const reply = () => {
+    const text = document.getElementById('humanReply').value.trim();
+    if (!text) return;
+    fetch('/handoff/resume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: data.session_id, human_reply: text }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        box.remove();
+        addMsg('agent', d.reply);
+        if (d.cost_usd) addMeta('成本 $' + d.cost_usd.toFixed(5) + ' | 耗时 ' + d.latency_ms + 'ms');
+      });
+  };
+  document.getElementById('sendHuman').onclick = reply;
+  document.getElementById('skipHuman').onclick = () => box.remove();
+}
+
+document.getElementById('send').onclick = () => {
+  const v = input.value.trim();
+  if (v) { input.value = ''; send(v); }
+};
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const v = input.value.trim();
+    if (v) { input.value = ''; send(v); }
+  }
+});
+</script>
+</body>
+</html>

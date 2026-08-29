@@ -1,0 +1,32 @@
+# ============ 电商客服 Agent 项目依赖 ============
+# 安装：python -m pip install -r requirements.txt
+
+# ---- LangChain / LangGraph（Agent 编排）----
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-openai>=0.2.0
+langchain-huggingface>=0.1.0
+langchain-chroma>=0.1.0
+langchain-text-splitters>=0.3.0
+langgraph>=0.2.0
+
+# ---- 向量库与检索 ----
+chromadb>=0.5.0
+rank-bm25>=0.2.2
+# 中文分词（BM25 关键词召回必须，否则中文整句会被当成一个 token）
+jieba>=0.42.1
+
+# ---- 本地 Embedding（默认方案，会连带安装 torch，体积较大）----
+# 如果改用 API Embedding（.env 里 EMBEDDING_PROVIDER=openai），
+# 可以注释掉下面这行，省去 torch 的安装。
+sentence-transformers>=3.0.0
+
+# ---- Web 服务与工具 ----
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# ---- 测试（可选，跑 python -m pytest tests/ 时安装）----
+pytest>=8.0.0
