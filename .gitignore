@@ -15,8 +15,11 @@ venv/
 data/chroma/
 data/eval/results_*.json
 
-# 简历文档（内部用，不公开）
+# 简历文档（含个人信息，不公开）
 docs/RESUME.md
+简历.pdf
+简历-优化版.md
+tmp_resume_extract.txt
 
 # IDE / 系统
 .vscode/
